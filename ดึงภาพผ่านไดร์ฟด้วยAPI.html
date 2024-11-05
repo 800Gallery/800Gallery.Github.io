@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แสดงภาพจาก Google Drive</title>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+    .image-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .image-item {
+      margin: 10px;
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <h1>แสดงภาพจาก Google Drive</h1>
+  <div class="image-gallery" id="imageGallery"></div>
+
+  <script>
+    // API Key ของคุณ (สร้างจาก Google Cloud Console)
+    const API_KEY = 'AIzaSyDdAoH17ggwI3RyjyCCOeMNPidEP1lZnJA';
+    const FOLDER_ID = '10D0FILxYyN8THnbqN5oT8EpIKjarJEkF'; // ใส่ Folder ID ที่ต้องการดึงข้อมูล
+
+    let pageToken = ''; // ใช้สำหรับจัดการการแบ่งหน้า (pagination)
+    
+    // โหลด Google API Client
+    function loadClient() {
+      gapi.client.setApiKey(API_KEY);
+      return gapi.client.load("https://www.googleapis.com/discovery/v1/apis/drive/v3/rest");
+    }
+
+    // ดึงรายการไฟล์ในโฟลเดอร์
+    function listImages() {
+      const request = gapi.client.drive.files.list({
+        'q': `'${FOLDER_ID}' in parents and mimeType contains 'image/' and trashed = false`,
+        'fields': 'nextPageToken, files(id, name)',
+        'pageToken': pageToken,
+        'pageSize': 100 // กำหนดจำนวนไฟล์ที่ดึงในแต่ละครั้ง (สูงสุด 100)
+      });
+
+      request.execute(function(response) {
+        const files = response.files;
+        pageToken = response.nextPageToken; // เก็บ pageToken สำหรับเรียกข้อมูลหน้าอื่นๆ
+        if (files && files.length > 0) {
+          const gallery = document.getElementById('imageGallery');
+          files.forEach(file => {
+            const img = document.createElement('img');
+            img.src = `https://drive.google.com/uc?id=${file.id}`;
+            img.alt = file.name;
+            img.classList.add('image-item');
+            gallery.appendChild(img);
+          });
+
+          // ถ้ายังมีหน้าถัดไปให้ดึงข้อมูลต่อ
+          if (pageToken) {
+            listImages(); // ดึงข้อมูลหน้าอื่นๆ ต่อ
+          }
+        } else {
+          console.log("ไม่พบภาพในโฟลเดอร์");
+        }
+      });
+    }
+
+    // เริ่มต้นการตั้งค่าของ Google API
+    function init() {
+      gapi.load('client', () => {
+        loadClient().then(() => {
+          listImages(); // เรียกใช้ฟังก์ชันเพื่อดึงภาพ
+        });
+      });
+    }
+  </script>
+
+  <script>
+    // เรียกใช้ฟังก์ชัน init เมื่อโหลดหน้าเว็บ
+    init();
+  </script>
+</body>
+</html>
